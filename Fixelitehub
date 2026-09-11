@@ -1,0 +1,64 @@
+
+local scriptUrl = "https://raw.githubusercontent.com/elitehub-scripts/Elitehub/refs/heads/main/Elitehub"
+
+-- Universal HTTP Fetcher compatible across Mobile & PC Executors
+local function fetchSource(url)
+    local success, result
+
+    -- Standard game:HttpGet method
+    success, result = pcall(function()
+        return game:HttpGet(url, true)
+    end)
+    if success and type(result) == "string" and #result > 0 then
+        return result
+    end
+
+    -- Global HttpGet fallback
+    success, result = pcall(function()
+        return HttpGet(url)
+    end)
+    if success and type(result) == "string" and #result > 0 then
+        return result
+    end
+
+    -- Executor-specific request functions (Delta, Codex, Solara, Wave, Arceus X, etc.)
+    local req = request or http_request or (syn and syn.request) or (fluxus and fluxus.request) or (http and http.request)
+    if req then
+        success, result = pcall(function()
+            local response = req({
+                Url = url,
+                Method = "GET"
+            })
+            return response and response.Body
+        end)
+        if success and type(result) == "string" and #result > 0 then
+            return result
+        end
+    end
+
+    return nil
+end
+
+-- Universal Loadstring Executor
+local function runScript()
+    local source = fetchSource(scriptUrl)
+    if not source then
+        warn("[EliteHub Loader]: Failed to retrieve script contents. Check connection or executor permissions.")
+        return
+    end
+
+    local loader = loadstring or (getgenv and getgenv().loadstring)
+    if not loader then
+        warn("[EliteHub Loader]: Executor does not support loadstring.")
+        return
+    end
+
+    local func, err = loader(source)
+    if func then
+        task.spawn(func)
+    else
+        warn("[EliteHub Loader]: Execution error - " .. tostring(err))
+    end
+end
+
+runScript()
